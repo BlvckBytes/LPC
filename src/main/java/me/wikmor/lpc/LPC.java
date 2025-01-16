@@ -55,9 +55,9 @@ public final class LPC extends JavaPlugin implements Listener {
 		return new ArrayList<>();
 	}
 
-	@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onChat(final AsyncPlayerChatEvent event) {
-		final String message = event.getMessage();
+		String message = event.getMessage();
 		final Player player = event.getPlayer();
 
 		// Get a LuckPerms cached metadata for the player.
@@ -77,9 +77,14 @@ public final class LPC extends JavaPlugin implements Listener {
 
 		format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
 
-		event.setFormat(format.replace("{message}", player.hasPermission("lpc.colorcodes") && player.hasPermission("lpc.rgbcodes")
-				? colorize(translateHexColorCodes(message)) : player.hasPermission("lpc.colorcodes") ? colorize(message) : player.hasPermission("lpc.rgbcodes")
-				? translateHexColorCodes(message) : message).replace("%", "%%"));
+		if (player.hasPermission("lpc.colorcodes"))
+			message = colorize(message);
+
+		if (player.hasPermission("lpc.rgbcodes"))
+			message = translateHexColorCodes(message);
+
+		event.setMessage(message);
+		event.setFormat(format.replace("{message}", message));
 	}
 
 	private String colorize(final String message) {
