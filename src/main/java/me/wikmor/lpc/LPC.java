@@ -2,7 +2,6 @@ package me.wikmor.lpc;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.luckperms.api.LuckPerms;
-import net.luckperms.api.cacheddata.CachedMetaData;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -11,13 +10,12 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public final class LPC extends JavaPlugin implements Listener {
+public class LPC extends JavaPlugin implements Listener {
 
   private LuckPerms luckPerms;
 
@@ -31,7 +29,7 @@ public final class LPC extends JavaPlugin implements Listener {
   }
 
   @Override
-  public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
+  public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
     if (args.length == 1 && "reload".equals(args[0])) {
       reloadConfig();
 
@@ -43,21 +41,21 @@ public final class LPC extends JavaPlugin implements Listener {
   }
 
   @Override
-  public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+  public List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command, @NotNull String alias, @NotNull String[] args) {
     if (args.length == 1)
-      return Collections.singletonList("reload");
+      return List.of("reload");
 
-    return new ArrayList<>();
+    return List.of();
   }
 
   @EventHandler(priority = EventPriority.LOWEST)
-  public void onChat(final AsyncPlayerChatEvent event) {
-    String message = event.getMessage();
-    final Player player = event.getPlayer();
+  public void onChat(AsyncPlayerChatEvent event) {
+    var message = event.getMessage();
+    var player = event.getPlayer();
 
     // Get a LuckPerms cached metadata for the player.
-    final CachedMetaData metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
-    final String group = metaData.getPrimaryGroup();
+    var metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
+    var group = metaData.getPrimaryGroup();
 
     String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
       .replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
