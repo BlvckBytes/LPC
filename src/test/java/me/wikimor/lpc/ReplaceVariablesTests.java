@@ -16,6 +16,14 @@ public class ReplaceVariablesTests {
   );
 
   @Test
+  public void shouldPassThroughStringsDevoidOfVariables() {
+    makeCase(
+      "This string does not contain any variables",
+      "This string does not contain any variables"
+    );
+  }
+
+  @Test
   public void shouldReplaceVariableOnlyContent() {
     makeCase(
       "{variable_1}",

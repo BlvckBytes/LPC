@@ -104,6 +104,10 @@
                         </goals>
                     </execution>
                 </executions>
+
+                <configuration>
+                    <finalName>${project.name}-${project.version}-fork-blvckbytes</finalName>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
