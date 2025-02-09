@@ -3,7 +3,6 @@ package me.wikmor.lpc;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.cacheddata.CachedMetaData;
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -16,13 +15,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public final class LPC extends JavaPlugin implements Listener {
-
-	private static final Pattern HEX_PATTERN = Pattern.compile("&#([A-Fa-f0-9]{6})");
 
 	private LuckPerms luckPerms;
 	
@@ -40,7 +35,7 @@ public final class LPC extends JavaPlugin implements Listener {
 		if (args.length == 1 && "reload".equals(args[0])) {
 			reloadConfig();
 
-			sender.sendMessage(colorize("&aLPC has been reloaded."));
+			sender.sendMessage("§aLPC has been reloaded.");
 			return true;
 		}
 
@@ -75,37 +70,77 @@ public final class LPC extends JavaPlugin implements Listener {
 				.replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
 				.replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
 
-		format = colorize(translateHexColorCodes(getServer().getPluginManager().isPluginEnabled("PlaceholderAPI") ? PlaceholderAPI.setPlaceholders(player, format) : format));
+		if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI"))
+			format = PlaceholderAPI.setPlaceholders(player, format);
 
-		if (player.hasPermission("lpc.colorcodes"))
-			message = colorize(message);
-
-		if (player.hasPermission("lpc.rgbcodes"))
-			message = translateHexColorCodes(message);
+		format = enableColors(format, true, true);
+		message = enableColors(message, player.hasPermission("lpc.colorcodes"), player.hasPermission("lpc.rgbcodes"));
 
 		event.setMessage(message);
 		event.setFormat(format.replace("{message}", message));
 	}
 
-	private String colorize(final String message) {
-		return ChatColor.translateAlternateColorCodes('&', message);
+	private static boolean isColorChar(char c) {
+		return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'k' && c <= 'o') || c == 'r';
 	}
 
-	private String translateHexColorCodes(final String message) {
-		final char colorChar = ChatColor.COLOR_CHAR;
+	private static boolean isHexChar(char c) {
+		return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+	}
 
-		final Matcher matcher = HEX_PATTERN.matcher(message);
-		final StringBuffer buffer = new StringBuffer(message.length() + 4 * 8);
+	private static String enableColors(String input, boolean allowVanilla, boolean allowHex) {
+		var inputLength = input.length();
+		var result = new StringBuilder(inputLength);
 
-		while (matcher.find()) {
-			final String group = matcher.group(1);
+		for (var charIndex = 0; charIndex < inputLength; ++charIndex) {
+			var currentChar = input.charAt(charIndex);
+			var remainingChars = inputLength - 1 - charIndex;
 
-			matcher.appendReplacement(buffer, colorChar + "x"
-					+ colorChar + group.charAt(0) + colorChar + group.charAt(1)
-					+ colorChar + group.charAt(2) + colorChar + group.charAt(3)
-					+ colorChar + group.charAt(4) + colorChar + group.charAt(5));
+			if (currentChar != '&' || remainingChars == 0) {
+				result.append(currentChar);
+				continue;
+			}
+
+			var nextChar = input.charAt(++charIndex);
+
+			// Possible hex-sequence of format &#RRGGBB
+			if (allowHex && nextChar == '#' && remainingChars >= 6 + 1) {
+				var r1 = input.charAt(charIndex + 1);
+				var r2 = input.charAt(charIndex + 2);
+				var g1 = input.charAt(charIndex + 3);
+				var g2 = input.charAt(charIndex + 4);
+				var b1 = input.charAt(charIndex + 5);
+				var b2 = input.charAt(charIndex + 6);
+
+				if (
+					isHexChar(r1) && isHexChar(r2)
+					&& isHexChar(g1) && isHexChar(g2)
+					&& isHexChar(b1) && isHexChar(b2)
+				) {
+					result
+						.append('§').append('x')
+						.append('§').append(r1)
+						.append('§').append(r2)
+						.append('§').append(g1)
+						.append('§').append(g2)
+						.append('§').append(b1)
+						.append('§').append(b2);
+
+					charIndex += 6;
+					continue;
+				}
+			}
+
+			// Vanilla color-sequence
+			if (allowVanilla && isColorChar(nextChar)) {
+				result.append('§').append(nextChar);
+				continue;
+			}
+
+			// Wasn't a color-sequence, store as-is
+			result.append(currentChar).append(nextChar);
 		}
 
-		return matcher.appendTail(buffer).toString();
+		return result.toString();
 	}
 }
