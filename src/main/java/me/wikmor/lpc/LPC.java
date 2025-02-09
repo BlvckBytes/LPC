@@ -11,9 +11,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 public class LPC extends JavaPlugin implements Listener {
 
@@ -27,6 +28,10 @@ public class LPC extends JavaPlugin implements Listener {
     saveDefaultConfig();
     getServer().getPluginManager().registerEvents(this, this);
   }
+
+  // ================================================================================
+  // LPC-Command
+  // ================================================================================
 
   @Override
   public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
@@ -48,34 +53,130 @@ public class LPC extends JavaPlugin implements Listener {
     return List.of();
   }
 
+  // ================================================================================
+  // Formatter
+  // ================================================================================
+
   @EventHandler(priority = EventPriority.LOWEST)
   public void onChat(AsyncPlayerChatEvent event) {
-    var message = event.getMessage();
     var player = event.getPlayer();
 
     // Get a LuckPerms cached metadata for the player.
     var metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
     var group = metaData.getPrimaryGroup();
 
-    String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
-      .replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
-      .replace("{suffix}", metaData.getSuffix() != null ? metaData.getSuffix() : "")
-      .replace("{prefixes}", metaData.getPrefixes().keySet().stream().map(key -> metaData.getPrefixes().get(key)).collect(Collectors.joining()))
-      .replace("{suffixes}", metaData.getSuffixes().keySet().stream().map(key -> metaData.getSuffixes().get(key)).collect(Collectors.joining()))
-      .replace("{world}", player.getWorld().getName())
-      .replace("{name}", player.getName())
-      .replace("{displayname}", player.getDisplayName())
-      .replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
-      .replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
+    String format;
+
+    if ((format = getConfig().getString("group-formats." + group)) == null)
+      format = getConfig().getString("chat-format");
+
+    if (format == null)
+      return;
+
+    var message = enableColors(event.getMessage(), player.hasPermission("lpc.colorcodes"), player.hasPermission("lpc.rgbcodes"));
+
+    event.setMessage(message);
+
+    format = replaceVariables(format, variableName -> {
+      String value;
+
+      switch (variableName) {
+        case "message":
+          return message;
+
+        case "prefix":
+          value = metaData.getPrefix();
+          break;
+
+        case "suffix":
+          value = metaData.getSuffix();
+          break;
+
+        case "prefixes":
+          value = String.join("", metaData.getPrefixes().values());
+          break;
+
+        case "suffixes":
+          value = String.join("", metaData.getSuffixes().values());
+          break;
+
+        case "world":
+          value = player.getWorld().getName();
+          break;
+
+        case "name":
+          value = player.getName();
+          break;
+
+        case "displayname":
+          value = player.getDisplayName();
+          break;
+
+        case "username-color":
+          value = metaData.getMetaValue("username-color");
+          break;
+
+        case "message-color":
+          value = metaData.getMetaValue("message-color");
+          break;
+
+        default:
+          return null;
+      }
+
+      if (value == null)
+        return "";
+
+      return value;
+    });
 
     if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI"))
       format = PlaceholderAPI.setPlaceholders(player, format);
 
     format = enableColors(format, true, true);
-    message = enableColors(message, player.hasPermission("lpc.colorcodes"), player.hasPermission("lpc.rgbcodes"));
 
-    event.setMessage(message);
-    event.setFormat(format.replace("{message}", message));
+    event.setFormat(format);
+  }
+
+  // ================================================================================
+  // Algorithms (see test-cases)
+  // ================================================================================
+
+  public static String replaceVariables(String input, Function<String, @Nullable String> valueLookup) {
+    var result = new StringBuilder(input.length());
+
+    int charIndex;
+    int nextPriorSubstringBegin = 0;
+
+    for (charIndex = 0; charIndex < input.length(); ++charIndex) {
+      var currentChar = input.charAt(charIndex);
+
+      if (currentChar != '{')
+        continue;
+
+      var closingIndex = input.indexOf('}', charIndex + 1);
+
+      if (closingIndex < 0)
+        continue;
+
+      var variableName = input.substring(charIndex + 1, closingIndex);
+      var variableValue = valueLookup.apply(variableName);
+
+      if (variableValue == null)
+        continue;
+
+      result.append(input, nextPriorSubstringBegin, charIndex);
+      nextPriorSubstringBegin = closingIndex + 1;
+
+      result.append(variableValue);
+
+      charIndex = closingIndex;
+    }
+
+    if (nextPriorSubstringBegin < charIndex)
+      result.append(input, nextPriorSubstringBegin, input.length());
+
+    return result.toString();
   }
 
   private static boolean isColorChar(char c) {
@@ -86,7 +187,7 @@ public class LPC extends JavaPlugin implements Listener {
     return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
   }
 
-  private static String enableColors(String input, boolean allowVanilla, boolean allowHex) {
+  public static String enableColors(String input, boolean allowVanilla, boolean allowHex) {
     var inputLength = input.length();
     var result = new StringBuilder(inputLength);
 
@@ -110,11 +211,7 @@ public class LPC extends JavaPlugin implements Listener {
         var b1 = input.charAt(charIndex + 5);
         var b2 = input.charAt(charIndex + 6);
 
-        if (
-          isHexChar(r1) && isHexChar(r2)
-            && isHexChar(g1) && isHexChar(g2)
-            && isHexChar(b1) && isHexChar(b2)
-        ) {
+        if (isHexChar(r1) && isHexChar(r2) && isHexChar(g1) && isHexChar(g2) && isHexChar(b1) && isHexChar(b2)) {
           result
             .append('§').append('x')
             .append('§').append(r1)

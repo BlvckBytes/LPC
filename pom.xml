@@ -12,7 +12,7 @@
     <properties>
         <author>wikmor</author>
         <main.class>me.wikmor.lpc.LPC</main.class>
-        <java.version>11</java.version>
+        <java.version>10</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -53,12 +53,22 @@
             <version>2.11.2</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>5.9.0</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <!-- DO NOT EDIT unless instructed to do so or you know what you're doing. -->
     <build>
         <finalName>${project.name}-${project.version}</finalName>
         <plugins>
+            <plugin>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.3.1</version>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
