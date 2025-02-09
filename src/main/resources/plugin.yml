@@ -3,7 +3,7 @@ description: ${project.description}
 version: ${project.version}
 main: ${main.class}
 author: ${author}
-api-version: 1.13
+api-version: 1.19
 depend: [LuckPerms]
 softdepend: [PlaceholderAPI]
 commands:
