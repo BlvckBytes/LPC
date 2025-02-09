@@ -22,7 +22,6 @@ public class LPC extends JavaPlugin implements Listener {
 
   @Override
   public void onEnable() {
-    // Load an instance of 'LuckPerms' using the services manager.
     this.luckPerms = getServer().getServicesManager().load(LuckPerms.class);
 
     saveDefaultConfig();
@@ -61,7 +60,6 @@ public class LPC extends JavaPlugin implements Listener {
   public void onChat(AsyncPlayerChatEvent event) {
     var player = event.getPlayer();
 
-    // Get a LuckPerms cached metadata for the player.
     var metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
     var group = metaData.getPrimaryGroup();
 
@@ -135,6 +133,7 @@ public class LPC extends JavaPlugin implements Listener {
 
     format = enableColors(format, true, true);
 
+    // NOTE: In contrast to the prior implementation, we do not escape % - that's up to the user, as to provide more flexibility.
     event.setFormat(format);
   }
 
