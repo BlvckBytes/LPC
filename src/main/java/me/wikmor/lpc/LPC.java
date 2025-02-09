@@ -19,128 +19,128 @@ import java.util.stream.Collectors;
 
 public final class LPC extends JavaPlugin implements Listener {
 
-	private LuckPerms luckPerms;
-	
-	@Override
-	public void onEnable() {
-		// Load an instance of 'LuckPerms' using the services manager.
-		this.luckPerms = getServer().getServicesManager().load(LuckPerms.class);
+  private LuckPerms luckPerms;
 
-		saveDefaultConfig();
-		getServer().getPluginManager().registerEvents(this, this);
-	}
+  @Override
+  public void onEnable() {
+    // Load an instance of 'LuckPerms' using the services manager.
+    this.luckPerms = getServer().getServicesManager().load(LuckPerms.class);
 
-	@Override
-	public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
-		if (args.length == 1 && "reload".equals(args[0])) {
-			reloadConfig();
+    saveDefaultConfig();
+    getServer().getPluginManager().registerEvents(this, this);
+  }
 
-			sender.sendMessage("§aLPC has been reloaded.");
-			return true;
-		}
+  @Override
+  public boolean onCommand(final CommandSender sender, final Command command, final String label, final String[] args) {
+    if (args.length == 1 && "reload".equals(args[0])) {
+      reloadConfig();
 
-		return false;
-	}
+      sender.sendMessage("§aLPC has been reloaded.");
+      return true;
+    }
 
-	@Override
-	public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
-		if (args.length == 1)
-			return Collections.singletonList("reload");
+    return false;
+  }
 
-		return new ArrayList<>();
-	}
+  @Override
+  public List<String> onTabComplete(final CommandSender sender, final Command command, final String alias, final String[] args) {
+    if (args.length == 1)
+      return Collections.singletonList("reload");
 
-	@EventHandler(priority = EventPriority.LOWEST)
-	public void onChat(final AsyncPlayerChatEvent event) {
-		String message = event.getMessage();
-		final Player player = event.getPlayer();
+    return new ArrayList<>();
+  }
 
-		// Get a LuckPerms cached metadata for the player.
-		final CachedMetaData metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
-		final String group = metaData.getPrimaryGroup();
+  @EventHandler(priority = EventPriority.LOWEST)
+  public void onChat(final AsyncPlayerChatEvent event) {
+    String message = event.getMessage();
+    final Player player = event.getPlayer();
 
-		String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
-				.replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
-				.replace("{suffix}", metaData.getSuffix() != null ? metaData.getSuffix() : "")
-				.replace("{prefixes}", metaData.getPrefixes().keySet().stream().map(key -> metaData.getPrefixes().get(key)).collect(Collectors.joining()))
-				.replace("{suffixes}", metaData.getSuffixes().keySet().stream().map(key -> metaData.getSuffixes().get(key)).collect(Collectors.joining()))
-				.replace("{world}", player.getWorld().getName())
-				.replace("{name}", player.getName())
-				.replace("{displayname}", player.getDisplayName())
-				.replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
-				.replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
+    // Get a LuckPerms cached metadata for the player.
+    final CachedMetaData metaData = this.luckPerms.getPlayerAdapter(Player.class).getMetaData(player);
+    final String group = metaData.getPrimaryGroup();
 
-		if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI"))
-			format = PlaceholderAPI.setPlaceholders(player, format);
+    String format = getConfig().getString(getConfig().getString("group-formats." + group) != null ? "group-formats." + group : "chat-format")
+      .replace("{prefix}", metaData.getPrefix() != null ? metaData.getPrefix() : "")
+      .replace("{suffix}", metaData.getSuffix() != null ? metaData.getSuffix() : "")
+      .replace("{prefixes}", metaData.getPrefixes().keySet().stream().map(key -> metaData.getPrefixes().get(key)).collect(Collectors.joining()))
+      .replace("{suffixes}", metaData.getSuffixes().keySet().stream().map(key -> metaData.getSuffixes().get(key)).collect(Collectors.joining()))
+      .replace("{world}", player.getWorld().getName())
+      .replace("{name}", player.getName())
+      .replace("{displayname}", player.getDisplayName())
+      .replace("{username-color}", metaData.getMetaValue("username-color") != null ? metaData.getMetaValue("username-color") : "")
+      .replace("{message-color}", metaData.getMetaValue("message-color") != null ? metaData.getMetaValue("message-color") : "");
 
-		format = enableColors(format, true, true);
-		message = enableColors(message, player.hasPermission("lpc.colorcodes"), player.hasPermission("lpc.rgbcodes"));
+    if (getServer().getPluginManager().isPluginEnabled("PlaceholderAPI"))
+      format = PlaceholderAPI.setPlaceholders(player, format);
 
-		event.setMessage(message);
-		event.setFormat(format.replace("{message}", message));
-	}
+    format = enableColors(format, true, true);
+    message = enableColors(message, player.hasPermission("lpc.colorcodes"), player.hasPermission("lpc.rgbcodes"));
 
-	private static boolean isColorChar(char c) {
-		return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'k' && c <= 'o') || c == 'r';
-	}
+    event.setMessage(message);
+    event.setFormat(format.replace("{message}", message));
+  }
 
-	private static boolean isHexChar(char c) {
-		return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
-	}
+  private static boolean isColorChar(char c) {
+    return (c >= 'a' && c <= 'f') || (c >= '0' && c <= '9') || (c >= 'k' && c <= 'o') || c == 'r';
+  }
 
-	private static String enableColors(String input, boolean allowVanilla, boolean allowHex) {
-		var inputLength = input.length();
-		var result = new StringBuilder(inputLength);
+  private static boolean isHexChar(char c) {
+    return (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F') || (c >= '0' && c <= '9');
+  }
 
-		for (var charIndex = 0; charIndex < inputLength; ++charIndex) {
-			var currentChar = input.charAt(charIndex);
-			var remainingChars = inputLength - 1 - charIndex;
+  private static String enableColors(String input, boolean allowVanilla, boolean allowHex) {
+    var inputLength = input.length();
+    var result = new StringBuilder(inputLength);
 
-			if (currentChar != '&' || remainingChars == 0) {
-				result.append(currentChar);
-				continue;
-			}
+    for (var charIndex = 0; charIndex < inputLength; ++charIndex) {
+      var currentChar = input.charAt(charIndex);
+      var remainingChars = inputLength - 1 - charIndex;
 
-			var nextChar = input.charAt(++charIndex);
+      if (currentChar != '&' || remainingChars == 0) {
+        result.append(currentChar);
+        continue;
+      }
 
-			// Possible hex-sequence of format &#RRGGBB
-			if (allowHex && nextChar == '#' && remainingChars >= 6 + 1) {
-				var r1 = input.charAt(charIndex + 1);
-				var r2 = input.charAt(charIndex + 2);
-				var g1 = input.charAt(charIndex + 3);
-				var g2 = input.charAt(charIndex + 4);
-				var b1 = input.charAt(charIndex + 5);
-				var b2 = input.charAt(charIndex + 6);
+      var nextChar = input.charAt(++charIndex);
 
-				if (
-					isHexChar(r1) && isHexChar(r2)
-					&& isHexChar(g1) && isHexChar(g2)
-					&& isHexChar(b1) && isHexChar(b2)
-				) {
-					result
-						.append('§').append('x')
-						.append('§').append(r1)
-						.append('§').append(r2)
-						.append('§').append(g1)
-						.append('§').append(g2)
-						.append('§').append(b1)
-						.append('§').append(b2);
+      // Possible hex-sequence of format &#RRGGBB
+      if (allowHex && nextChar == '#' && remainingChars >= 6 + 1) {
+        var r1 = input.charAt(charIndex + 1);
+        var r2 = input.charAt(charIndex + 2);
+        var g1 = input.charAt(charIndex + 3);
+        var g2 = input.charAt(charIndex + 4);
+        var b1 = input.charAt(charIndex + 5);
+        var b2 = input.charAt(charIndex + 6);
 
-					charIndex += 6;
-					continue;
-				}
-			}
+        if (
+          isHexChar(r1) && isHexChar(r2)
+            && isHexChar(g1) && isHexChar(g2)
+            && isHexChar(b1) && isHexChar(b2)
+        ) {
+          result
+            .append('§').append('x')
+            .append('§').append(r1)
+            .append('§').append(r2)
+            .append('§').append(g1)
+            .append('§').append(g2)
+            .append('§').append(b1)
+            .append('§').append(b2);
 
-			// Vanilla color-sequence
-			if (allowVanilla && isColorChar(nextChar)) {
-				result.append('§').append(nextChar);
-				continue;
-			}
+          charIndex += 6;
+          continue;
+        }
+      }
 
-			// Wasn't a color-sequence, store as-is
-			result.append(currentChar).append(nextChar);
-		}
+      // Vanilla color-sequence
+      if (allowVanilla && isColorChar(nextChar)) {
+        result.append('§').append(nextChar);
+        continue;
+      }
 
-		return result.toString();
-	}
+      // Wasn't a color-sequence, store as-is
+      result.append(currentChar).append(nextChar);
+    }
+
+    return result.toString();
+  }
 }
